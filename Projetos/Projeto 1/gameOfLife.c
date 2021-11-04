@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
-#define GENERATIONS 2000
+#define GENERATIONS 20
 #define THREADS 8
 
 void initializeMatrix(int *matrix, int N);
@@ -16,40 +16,16 @@ void copyMatrix(int *grid, int *newGrid, int startGrid, int endGrid);
 int getTotalAlive(int *grid, int N);
 int getPrevious(int pos, int N);
 int getNext(int pos, int N);
+void runTrial(int numThreads, int N);
 
 
 void main() {
-    omp_set_num_threads(THREADS);
-    int *newGrid, *grid, N;
+    int N;
+    int threads[] = {1, 2, 4, 8};
     scanf("%d", &N);
-    newGrid = malloc(sizeof(int) * N * N);
-    grid = malloc(sizeof(int) * N * N);
-    initializeMatrix(grid, N);
-    drawGlider(grid, N);
-    drawRPentomino(grid, N);
-    copyMatrix(newGrid, grid, 0, N);
-    printMatrix(grid, N);
-    printf("Initial condition: %d\n", getTotalAlive(grid, N));
-    int gridSize = N/THREADS;
-    int i, threadId, gridStart, gridEnd;
-    struct timeval start, end;
-    long long timeMs;
-
-    gettimeofday(&start, NULL);
-    #pragma omp parallel default(none) private(i, threadId, gridStart, gridEnd) shared(grid, newGrid, N, gridSize) 
-        {
-            threadId = omp_get_thread_num();
-            gridStart = (threadId)*gridSize;
-            gridEnd = (threadId+1)*gridSize;
-            for (i=1; i <= GENERATIONS; i++) {
-                simulateLifeGame(grid, newGrid, N, gridStart, gridEnd);
-                copyMatrix(grid, newGrid, gridStart, gridEnd);
-            }
-        }
-    printf("Last generation (%d Iterations): %d alive cells.\n", GENERATIONS, getTotalAlive(grid, N));
-    gettimeofday(&end, NULL);
-    timeMs = (int) (1000*(end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000);
-    printf("Time for %d threads: %lldms\n", THREADS, timeMs);
+    for (int i=0; i < 4; i++) {
+        runTrial(threads[i], N);
+    }
 }
 
 void printMatrix(int *matrix, int N) {
@@ -154,4 +130,39 @@ int getNext(int pos, int N) {
         return 0;
     }  
     return pos+1;
+}
+
+
+void runTrial(int numThreads, int N) {
+    omp_set_num_threads(numThreads);
+    int *newGrid, *grid;
+    newGrid = malloc(sizeof(int) * N * N);
+    grid = malloc(sizeof(int) * N * N);
+    initializeMatrix(grid, N);
+    drawGlider(grid, N);
+    drawRPentomino(grid, N);
+    copyMatrix(newGrid, grid, 0, N);
+    //printMatrix(grid, N);
+    printf("Initial condition: %d\n", getTotalAlive(grid, N));
+    int gridSize = N/numThreads;
+    int i, threadId, gridStart, gridEnd;
+    struct timeval start, end;
+    long long timeMs;
+
+    gettimeofday(&start, NULL);
+    #pragma omp parallel default(none) private(i, threadId, gridStart, gridEnd) shared(grid, newGrid, N, gridSize) 
+        {
+            threadId = omp_get_thread_num();
+            gridStart = (threadId)*gridSize;
+            gridEnd = (threadId+1)*gridSize;
+            for (i=1; i <= GENERATIONS; i++) {
+                simulateLifeGame(grid, newGrid, N, gridStart, gridEnd);
+                copyMatrix(grid, newGrid, gridStart, gridEnd);
+            }
+        }
+    printf("Last generation (%d Iterations): %d alive cells.\n", GENERATIONS, getTotalAlive(grid, N));
+    gettimeofday(&end, NULL);
+    timeMs = (int) (1000*(end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000);
+    printf("Time for %d threads: %lldms\n", numThreads, timeMs);
+    return;
 }
