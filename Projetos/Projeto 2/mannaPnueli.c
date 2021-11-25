@@ -23,9 +23,9 @@ int criticalRegionDemonstration() {
         } else { //client
             for (i = 0; i < N; i++) {
                 //Critical Region Access Control
-                /* while (respond != threadId) {
+                while (respond != threadId) {
                     request = threadId;
-                } */
+                }
 
                 // BEGIN of Critical Region
                 int localFactor = sum;
